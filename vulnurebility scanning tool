@@ -1,0 +1,60 @@
+import os
+import re
+
+# List of common patterns for sensitive information (API keys, passwords)
+patterns = {
+    'API Key': r'(?i)(api[-_]?key|apikey)[\s:="\'-]*([a-zA-Z0-9_-]{20,})',
+    'Password': r'(?i)(password)[\s:="\'-]*([a-zA-Z0-9!@#$%^&*()_+={}|;:,.<>?/]{6,})',
+    'AWS Access Key': r'(?i)(aws[-_]?access[-_]?key)[\s:="\'-]*([A-Z0-9]{20})',
+    'AWS Secret Key': r'(?i)(aws[-_]?secret[-_]?key)[\s:="\'-]*([a-zA-Z0-9/+=]{40})',
+    'JWT Token': r'(?i)(jwt[-_]?token)[\s:="\'-]*([A-Za-z0-9\-._~+/]{100,})',
+}
+
+# Function to search for sensitive information patterns in files
+def search_patterns_in_file(file_path):
+    findings = {}
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            for label, pattern in patterns.items():
+                matches = re.findall(pattern, content)
+                if matches:
+                    findings[label] = matches
+    except Exception as e:
+        print(f"Error reading file {file_path}: {e}")
+    return findings
+
+# Function to scan files in a directory
+def scan_directory(directory):
+    sensitive_data = {}
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(root, file)
+            print(f"Scanning file: {file_path}")
+            findings = search_patterns_in_file(file_path)
+            if findings:
+                sensitive_data[file_path] = findings
+    return sensitive_data
+
+# Function to display findings
+def display_findings(findings):
+    if not findings:
+        print("No vulnerabilities found!")
+        return
+
+    for file_path, findings_in_file in findings.items():
+        print(f"\nVulnerabilities found in file: {file_path}")
+        for label, matches in findings_in_file.items():
+            print(f"  {label}:")
+            for match in matches:
+                print(f"    - {match[1]}")
+
+if __name__ == "__main__":
+    # Set the directory to scan (you can modify this path)
+    directory_to_scan = './'  # Current directory
+
+    print(f"Scanning directory: {directory_to_scan}")
+    vulnerabilities = scan_directory(directory_to_scan)
+
+    # Display findings
+    display_findings(vulnerabilities)
